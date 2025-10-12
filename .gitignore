@@ -5,3 +5,5 @@ build
 
 .env
 /generated/prisma
+
+coverage
