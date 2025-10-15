@@ -3,26 +3,28 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CheckInUseCase } from "./check-in";
 import { InMemoryGymsRepository } from "@/repositories/in-memory/in-memory-gyms-repository";
 import { Decimal } from "@prisma/client/runtime/library";
+import { MaxNumbersOfCheckInsError } from "./errors/max-numbers-of-check-ins";
+import { MaxDistanceError } from "./errors/max-distance-error";
 
 let gymsRepository: InMemoryGymsRepository;
 let checkInsRepository: InMemoryCheckInsRepository;
 let sut: CheckInUseCase;
 
 describe("Check-in Use Case", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.useFakeTimers();
 
     gymsRepository = new InMemoryGymsRepository();
     checkInsRepository = new InMemoryCheckInsRepository();
     sut = new CheckInUseCase(checkInsRepository, gymsRepository);
 
-    gymsRepository.items.push({
+    await gymsRepository.create({
       id: "gym-1",
       name: "JavaScript Gym",
       description: "",
       phone: "",
-      latitude: new Decimal(-27.2092052),
-      longitude: new Decimal(-49.6401091),
+      latitude: -27.2092052,
+      longitude: -49.6401091,
     });
   });
 
@@ -58,7 +60,7 @@ describe("Check-in Use Case", () => {
         userLatitude: -27.2092052,
         userLongitude: -49.6401091,
       })
-    ).rejects.toBeInstanceOf(Error);
+    ).rejects.toBeInstanceOf(MaxNumbersOfCheckInsError);
   });
 
   it("should be able to check in twice but in different days", async () => {
@@ -86,15 +88,6 @@ describe("Check-in Use Case", () => {
   });
 
   it("should not be able to check in on distant gym", async () => {
-    // gymsRepository.items.push({
-    //   id: "gym-2",
-    //   name: "TypeScript Gym",
-    //   description: "",
-    //   phone: "",
-    //   latitude: new Decimal(-27.0742052),
-    //   longitude: new Decimal(-49.4881091),
-    // });
-
     await expect(() =>
       sut.execute({
         gymId: "gym-1",
@@ -102,6 +95,6 @@ describe("Check-in Use Case", () => {
         userLatitude: -27.0742052,
         userLongitude: -49.4881091,
       })
-    ).rejects.toBeInstanceOf(Error);
+    ).rejects.toBeInstanceOf(MaxDistanceError);
   });
 });
